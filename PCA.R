@@ -5,15 +5,17 @@ library(corrplot)
 library(matrixStats)
 
 #==============================================================#
-#  Feature Selection:   
+#  Feature Selection:find features that drives most the variance
 #  PCA - exploratory analysis
-#  Input : expr_clean = data.table (samples in rows, "samples_name"
-#          + genes, log2-CPM) ; meta = sample metadata
-#  Goal  : see which factors drive the variance
-#          (region, inflammation, disease ?)
+#  Input : expr = data.table 
+#          samples in rows, 
+#         "samples_name+ genes, log2-CPM) ; meta = sample metadata
+#          
 #==============================================================#
 
-
+#---------------------------------------------------------------
+# Matrix samples x genes + metadata 
+#---------------------------------------------------------------
 expr=fread( "data/expr_clean_logcpm.csv")
 meta =fread("data/meta_selected_samples.csv")
 
@@ -25,11 +27,6 @@ samples_label=samples_label[match(expr$samples_name, meta$samples_name), ]
 
 #df=merge(as.data.table(samples_label), as.data.table(expr), by="samples_name")
 
-
-
-#---------------------------------------------------------------
-# Matrix samples x genes + metadata in the same order
-#---------------------------------------------------------------
 X = as.matrix(expr[, -"samples_name"])
 rownames(X) = expr$samples_name
 
@@ -65,7 +62,7 @@ ggplot(data.frame(PC = 1:10, var = var_expl[1:10]), aes(PC, var)) +
   labs(title = "Variance explained by each PC", x = "Principal component",
        y = "Variance explained (%)") +
   theme_minimal()
-#  Top 20 genes driving PC1 (largest absolute loadings)
+#  Top 20 genes driving PC1 
 plot(var_expl[1:20], type = "b", pch = 19,
      xlab = "PC", ylab = "Proportion of variance", main = "Scree plot")
 
@@ -92,7 +89,7 @@ selected_genes = unique(top_genes)     # remove duplicate
 
 
 #---------------------------------------------------------------
-# 4) PC1 vs PC2 coloured by each factor
+#  PC1 vs PC2 coloured by each tissus status, region and IBD type
 #---------------------------------------------------------------
 scores = cbind(meta_pca, as.data.frame(pca$x[, 1:5]))
 
@@ -110,10 +107,3 @@ plot_pc("region_groups",     "PCA coloured by region")
 plot_pc("typere",      "PCA coloured by inflammation status")
 plot_pc("ibd_disease", "PCA coloured by diagnosis")
 
-install.packages("usethis")
-library(usethis)
-
-
-system('git config --global user.name "Mounaj3"')
-
-system('git config --global user.email "mouna.jegham3@gmail.com"')
