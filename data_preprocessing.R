@@ -111,6 +111,9 @@ preprocess_bionero = function(dt,
 #  Run the pipeline (on RAW counts)
 #==============================================================#
 
+genes_annotation=fread("data/selected_genes_annotation.csv")
+expr=fread("data/counts_selected_samples.csv")
+
 # 1. Known genes: protein-coding + long non-coding RNAs
 expr_selected_genes = filter_gene_type(expr, genes_annotation,
                                         keep_types = c("protein-coding", "ncRNA"))
