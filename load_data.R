@@ -9,11 +9,10 @@ library(dplyr)
 
 #---------------------------Metadata------------------------------------#
 
-eset = getGEO(filename = "data/GSE193677_series_matrix.txt", getGPL = FALSE)
-meta= pData(eset)
+eset = getGEO( filename ="data/GSE193677_series_matrix.txt",getGPL = FALSE)
 
-#meta$title
-names(meta)
+meta= pData(eset)      
+
 
 #Remove "ch1$" 
 names(meta) = sub(":ch1$", "", names(meta))
@@ -22,23 +21,27 @@ names(meta) = sub(":ch1$", "", names(meta))
 meta$samples_name=sub(",.*", "", meta$title) # replace what comes after 1st ',' by ''
 meta$reGRID_patient= sub("MSCCR_reGRID_(\\d+)_Biopsy_\\d+", "\\1",
                          meta$samples_name) # in : MSCCR_reGRID_1_Biopsy_3, 1 is patient's ID 
-
-
-keep= c("geo_accession", "samples_name", "reGRID_patient",
-        "typere", "regionre", "ibd_disease", "diseasetypere", "diseasebi",
-        "demographics_gender", "study_eligibility_age_at_endo",
-        "crp_jjmgl_log2", "log2_fecalcalpro_mgperg",
-        "harveybradshawindex_hbi_score", "colitisactivityindex_sccai",
-        "ibd_clinicianmeasure_inactive_active",
-        "ibdsescd_totalsescd", "ibdmesuc_mayo_score", "ibd_endoseverity_4levels", "endoremiss",
-        "ghas_sum7", "nancyindex", "max_ghas_sum7", "max_nancy", "historemiss")
+colnames(meta)
+keep <- c(
+  
+  "geo_accession", "samples_name", "reGRID_patient","typere",  "demographics_gender" ,       
+  "diseasebi","regionre", "ibd_disease",
+  "ibd_endoseverity_4levels", "ghas_sum7" ,       # sévérité endoscopique (patient)
+  "crp_jjmgl_log2")               # CRP (inflammation systémique), ~4 % de NA
 
 
 meta=meta[,keep]
-
-
 dim(meta)        
 colnames(meta)
+str(meta)
+meta[] <- lapply(meta, function(x) {
+  x <- trimws(as.character(x))
+  x[x %in% c("", "NA", "N/A", "na", "n/a", "NaN", "Not Available", "not available")] <- NA
+  x
+})
+
+meta = meta %>% 
+  mutate_at(c("crp_jjmgl_log2","ghas_sum7"), as.numeric)
 
 # Exclude the controle 
 meta=meta[meta$diseasebi =="IBD",]
@@ -48,6 +51,8 @@ table(meta$typere)
 # Statut inflammatoire : "I" ou "NonI"
 
 pat= meta
+class(pat)
+str(pat)
 #Create 3 regions groups
 pat= pat %>%
   mutate(region_groups = case_when(
@@ -57,9 +62,11 @@ pat= pat %>%
   ))
 
 table(pat$region_groups)
-
+goal <- pat %>%
+  dplyr::filter(typere == "I") %>%
+  dplyr::count(ibd_disease, region_groups, name = "n_cible")
 #Count the samples per group in the Inflamed biopsy samples
-goal = pat %>% filter(typere == "I") %>% count(ibd_disease, region_groups, name = "n_cible")
+goal = pat %>% dplyr::filter(typere == "I") %>% dplyr::count(ibd_disease, region_groups, name = "n_cible")
 goal
 
 set.seed(123)
@@ -70,17 +77,16 @@ NonI_samples = pat %>%
   slice_sample(prop = 1) %>%
   filter(row_number() <= n_cible) %>%
   ungroup()
+NonI_samples=NonI_samples[,!names(NonI_samples) %in% "n_cible"]
+dplyr::count(NonI_samples, ibd_disease, region_groups) 
 
-count(NonI_samples, ibd_disease, region_groups) 
+I_samples= pat %>% dplyr::filter(typere== "I")
 
-I_samples= pat %>% filter(typere== "I")
-final_samples= bind_rows(
-  I_samples,
-  NonI_samples
-)
+final_samples= bind_rows( I_samples,NonI_samples)
 
 table(final_samples$typere)   
 table(final_samples$typere, final_samples$region_groups)
+str(final_samples)
 
 
 
@@ -119,11 +125,8 @@ dim(counts)
 dim(final_samples)
 
 
-
-
 fwrite(as.data.table(counts, keep.rownames = "samples_name"),
        "data/counts_selected_samples.csv")
-
 fwrite(final_samples, "data/meta_selected_samples.csv")
 
 
