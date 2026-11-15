@@ -1,0 +1,35 @@
+library(BioNERO)
+library(data.table)
+#library(KEGGREST)
+
+###=============================================###
+#         Exploratory Data Analysis
+###=============================================###
+expr=fread( "data/expr_clean_logcpm.csv")
+meta =fread("data/meta_selected_samples.csv")
+
+
+x = as.data.frame(t(as.matrix(expr[, -"samples_name"])))
+colnames(x) = expr$samples_name
+
+# Sample annotation
+col_meta = as.data.frame(meta)
+rownames(col_meta) = col_meta$samples_name
+col_meta = col_meta[colnames(x), c("typere", "ibd_disease", "region_groups")]
+
+#It takes time, so maybe run it with 40 genes
+cor=plot_heatmap(x[1:300, ],
+             col_metadata = col_meta,
+             type = "samplecor",
+             cor_method = "pearson",
+             show_rownames = FALSE, show_colnames = FALSE)                     
+#cor
+
+
+P_reg_ibd=plot_PCA(x[1:2000,],
+         metadata = col_meta[, c("region_groups", "ibd_disease")])
+
+P_reg_status=plot_PCA(x[1:2000,],
+         metadata = col_meta[, c("region_groups", "typere")])
+P_reg_status
+# We have some outliers! 
