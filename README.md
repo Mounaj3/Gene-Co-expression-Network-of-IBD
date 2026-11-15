@@ -7,6 +7,8 @@ intestinal tissue from patients with IBD (Crohn's disease and ulcerative colitis
 We focus on genes from the TLR, NF-κB and JAK-STAT pathways, and we build the networks
 with PC and MIIC.
 
+Authors: [Mouna Jegham](github.com/Mounaj3) and [Chloé Dubray](github.com/chloychlo)
+
 ## Data
 
 We use the MSCCR cohort from GEO (GSE193677): bulk RNA-seq of about 2,500 intestinal biopsies.
