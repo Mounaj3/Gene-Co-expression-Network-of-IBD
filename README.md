@@ -35,6 +35,8 @@ You don't need to unzip the count matrix, R can read it directly.
    PC and MIIC algorithms.
 6. Explore and visualise the results, compare the two networks, and run a pathway enrichment.
 
+
+## Description of the R scripts
 * **01_load_data**: Load the GEO dataset GSE193677, extract and clean sample metadata, and select a balanced set of inflamed and non-inflamed IBD biopsy samples.
   * Inputs: _data/raw/GSE193677_series_matrix.txt_	(GEO series matrix containing sample metadata), _data/raw/GSE193677_MSCCR_Biopsy_counts.txt_	(Raw RNA-seq gene expression count matrix)
   * Outputs: _data/processed/counts_selected_samples.csv_	(Raw gene expression counts for selected samples), _data/processed/meta_selected_samples.csv_	(Cleaned metadata for selected samples)
