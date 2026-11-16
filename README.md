@@ -35,6 +35,19 @@ You don't need to unzip the count matrix, R can read it directly.
    PC and MIIC algorithms.
 6. Explore and visualise the results, compare the two networks, and run a pathway enrichment.
 
+* **01_load_data**: Load the GEO dataset GSE193677, extract and clean sample metadata, and select a balanced set of inflamed and non-inflamed IBD biopsy samples.
+  * Inputs: _data/raw/GSE193677_series_matrix.txt_	(GEO series matrix containing sample metadata), _data/raw/GSE193677_MSCCR_Biopsy_counts.txt_	(Raw RNA-seq gene expression count matrix)
+  * Outputs: _data/processed/counts_selected_samples.csv_	(Raw gene expression counts for selected samples), _data/processed/meta_selected_samples.csv_	(Cleaned metadata for selected samples)
+* **02_data_preprocessing**: Filter genes based on their biotype, remove mitochondrial and ribosomal genes, normalise RNA-seq counts using TMM and log2-CPM, and retain the 3,000 most variable genes.
+  * Inputs: _data/processed/counts_selected_samples.csv_ (Raw gene expression counts), _data/raw/Human.GRCh38.p13.annot.tsv_ (Gene annotation file)
+  * Outputs: _data/processed/expr_clean_logcpm.csv_ (Filtered and normalised gene expression matrix), _data/processed/selected_genes_annotation.csv_ (Annotations of retained genes), _data/processed/preprocessed_data.rds_ (Combined preprocessed data and annotations)
+* **03_network_inference_PC**: Select genes from inflammation-related Reactome pathways (including transcription factors and the 100 most variable pathway genes), infer separate gene networks using the PC algorithm for inflamed and non-inflamed samples, and export network objects, edge lists and visualisations.
+  * Inputs: _data/processed/preprocessed_data.rds_ (Preprocessed expression matrix, gene annotations and sample metadata).
+  * Outputs: _data/processed/selected_genes_annotation_PC.csv_ (Annotations of selected genes), _data/processed/selected_expression_matrices.rds_ (Expression matrices for both conditions), _results/networks/PC_network_ (Inferred PC network objects and edge lists), _results/figures/PC_network.png_ (Network visualisations).
+* **04_network_analysis_PC**: Compare the inflamed and non-inflamed PC networks by analysing their topology, connectivity, shared and condition-specific interactions, and performing exploratory Reactome pathway enrichment on condition-specific genes.
+  * Inputs: _results/networks/PC_network_inflamed_edges.csv_ and _results/networks/PC_network_noninflamed_edges.csv_ (Inferred network edge lists), _data/processed/selected_expression_matrices.rds_ (Selected gene annotations).
+  * Outputs: _results/analysis/tables/_ (CSV files containing network statistics, node degrees, edge comparisons and Reactome enrichment results), _results/analysis/networks/_ (RDS network and enrichment objects), _results/analysis/figures/_ (Network visualisations and Reactome enrichment plots).
+
 ## Key design choices
 
 - Normalisation is done after the count-based filters, on both groups together, so the two
@@ -45,12 +58,31 @@ You don't need to unzip the count matrix, R can read it directly.
 ## Requirements
 
 ```r
-install.packages(c("data.table", "dplyr", "tidyr", "ggplot2", "matrixStats",
-                   "reshape2", "miic", "igraph"))
+# CRAN packages
+install.packages(c(
+  "data.table",
+  "dplyr",
+  "matrixStats",
+  "msigdbr",
+  "igraph",
+  "ggraph",
+  "ggplot2",
+  "ggrepel"
+))
 
-if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
-BiocManager::install(c("GEOquery", "edgeR", "limma", "BioNERO",
-                       "KEGGREST", "decoupleR", "pcalg"))
+# Bioconductor packages
+if (!requireNamespace("BiocManager", quietly = TRUE)) {
+  install.packages("BiocManager")
+}
+
+BiocManager::install(c(
+  "GEOquery",
+  "BioNERO",
+  "edgeR",
+  "pcalg",
+  "dorothea",
+  "clusterProfiler"
+))
 ```
 
 ## References
