@@ -1,7 +1,6 @@
 #========================================================================#
 #  Preprocessing of the MSCCR expression data (GSE193677)
-#  Input : expr = data.table ou RAW COUNTS
-#                 samples in rows 
+#  Input : expr = data.table, samples x genes
 #                 "samples_name"  column  + one column per gene (Ensembl IDXXX)
 #  Output: expr_clean = same format, log2-CPM (TMM), filtered genes
 #===========================================================================#
@@ -11,8 +10,6 @@ library(dplyr)
 library(BioNERO)
 library(edgeR)
 library(matrixStats)
-
-
 set.seed(123)
 
 #---------------------------------------------------------------
@@ -60,8 +57,12 @@ remove_ribo_mito = function(dt, annot) {
 }
 
 #---------------------------------------------------------------
-#  Missing values, non-expressed genes, normalisation,
-#    constant genes, optional top_n and outliers (BioNERO + edgeR)
+#   Preprocessing genes expression values:
+#   constant genes, Non-expressed genes, normalisation,
+#   optional top_n and outliers
+#   Package: BioNERO + edgeR
+#   input :  dt : data.table count 
+#           
 #---------------------------------------------------------------
 preprocess_bionero = function(dt,
                               min_exp = 20,           # raw-count threshold
@@ -74,8 +75,6 @@ preprocess_bionero = function(dt,
   colnames(exp) = dt$samples_name
   cat("Start:", nrow(exp), "genes,", ncol(exp), "samples\n")
   
-  # Missing values -> 0
-  exp = replace_na(exp)
   
   # Constant genes (zero variance)
   v = rowVars(as.matrix(exp))
@@ -89,15 +88,17 @@ preprocess_bionero = function(dt,
   cat("After non-expressed filter:", nrow(exp), "genes\n")
   
   
-  # Normalisation: TMM + log2-CPM (edgeR): correction for seq depth and library size 
+  #Normalisation: TMM + log2-CPM (edgeR): correction for seq depth and library size 
   y   = calcNormFactors(DGEList(counts = as.matrix(exp)))
   exp = as.data.frame(cpm(y, log = TRUE))
   
   
   # keep the top_n most variable genes
   if (!is.null(top_n)) {
-    exp = filter_by_variance(exp, n = top_n)
-    cat("After variance filter:", nrow(exp), "genes\n")
+    mad_values = rowMads(as.matrix(exp), na.rm = TRUE)
+    selected_genes = names(sort(mad_values, decreasing = TRUE))[1:min(top_n, length(mad_values))]
+    exp = exp[selected_genes, , drop = FALSE]
+    cat("After MAD filter:", nrow(exp), "genes\n")
   }
   
   # Optional: outlier samples (Z.K method)
@@ -111,17 +112,19 @@ preprocess_bionero = function(dt,
   data.table(samples_name = colnames(exp), t(as.matrix(exp)))
 }
 
+
 #==============================================================#
 #  Run the pipeline (on RAW counts)
 #==============================================================#
 
 
-genes_annotation=fread("data/Human.GRCh38.p13.annot.tsv")
-expr=fread("data/counts_selected_samples.csv")
+genes_annotation=fread("data/row/Human.GRCh38.p13.annot.tsv")
+expr=fread("data/processed/counts_selected_samples.csv")
 
-# 1. Known genes: protein-coding + long non-coding RNAs
-expr_selected_genes = filter_gene_type(expr, genes_annotation,
-                                       keep_types = c("protein-coding", "ncRNA"))
+# 1. Known genes: protein-coding 
+expr_selected_genes = filter_gene_type(expr, genes_annotation,keep_types = c("protein-coding"))
+
+
 
 # 2. Remove mitochondrial and ribosomal genes
 expr_selected_genes = remove_ribo_mito(expr_selected_genes, genes_annotation)
@@ -129,15 +132,19 @@ expr_selected_genes = remove_ribo_mito(expr_selected_genes, genes_annotation)
 
 
 # 3. Missing values, non-expressed, normalisation, constant genes
-expr_clean = preprocess_bionero(expr_selected_genes, min_exp = 10, min_prop = 0.3, top_n=3000)
+expr_clean = preprocess_bionero(expr_selected_genes,
+                                min_exp = 20,           # raw-count threshold
+                                min_prop = 0.4,         # fraction of samples >= min_exp
+                                top_n = 3000,           # n most variable genes (NULL = all)
+                                remove_outliers = FALSE)
+
+
 
 # Annotation of the genes kept (in the same order of counts matrix)
 annotation_kept = genes_annotation[match(names(expr_clean)[-1], EnsemblGeneID)]
 
 # Save
-dir.create("data", showWarnings = FALSE)
-fwrite(expr_clean, "data/expr_clean_logcpm.csv")
-fwrite(annotation_kept, "data/selected_genes_annotation.csv")
-
-#p = plot_heatmap(expr_clean, type = "samplecor", show_rownames = FALSE)
+dir.create("data/processed", showWarnings = FALSE)
+fwrite(expr_clean, "data/processed/expr_data.csv")
+fwrite(annotation_kept, "data/processed/selected_genes_annotation.csv")
 

@@ -1,3 +1,13 @@
+#========================================================================#
+#  Loading the MSCCR expression data (GSE193677)
+#  Input : metadata : Loaded from GSE193677_series_matrix.txt 
+#          RAW COUNTS : loaded from GSE193677_MSCCR_Biopsy_counts.txt
+#                       samples in rows 
+#                       "samples_name"  column  + one column per gene (Ensembl IDXXX)
+#  Output: selected_samples : data.table metadata, only IBD samples
+#          counts : data.table: samples x genes
+#===========================================================================#
+
 
 #if (!require("BiocManager", quietly = TRUE))
 #  install.packages("BiocManager")
@@ -6,28 +16,35 @@ library(GEOquery)
 library(dplyr)
 
 
-
 #---------------------------Metadata------------------------------------#
 
-eset = getGEO( filename ="data/GSE193677_series_matrix.txt",getGPL = FALSE)
-
+# Using GEOquery to read the matrix file
+eset = getGEO( filename ="data/row/GSE193677_series_matrix.txt",getGPL = FALSE)
 meta= pData(eset)      
 
 
 #Remove "ch1$" 
 names(meta) = sub(":ch1$", "", names(meta))
-# Extract important info from title column
 
+# Extract important info from title column
 meta$samples_name=sub(",.*", "", meta$title) # replace what comes after 1st ',' by ''
 meta$reGRID_patient= sub("MSCCR_reGRID_(\\d+)_Biopsy_\\d+", "\\1",
                          meta$samples_name) # in : MSCCR_reGRID_1_Biopsy_3, 1 is patient's ID 
-colnames(meta)
+
+
+
+#Select variables interessing for the network
+# CRP (inflammation systémique)
+# sévérité endoscopique (patient) : Inactive, Moderate, Mild, Severe
+# general histology activity score : from 1 to 11
+
+
 keep <- c(
   
   "geo_accession", "samples_name", "reGRID_patient","typere",  "demographics_gender" ,       
   "diseasebi","regionre", "ibd_disease",
-  "ibd_endoseverity_4levels", "ghas_sum7" ,       # sévérité endoscopique (patient)
-  "crp_jjmgl_log2")               # CRP (inflammation systémique), ~4 % de NA
+  "ibd_endoseverity_4levels", "ghas_sum7" ,     
+  "crp_jjmgl_log2")               
 
 
 meta=meta[,keep]
@@ -82,11 +99,11 @@ dplyr::count(NonI_samples, ibd_disease, region_groups)
 
 I_samples= pat %>% dplyr::filter(typere== "I")
 
-final_samples= bind_rows( I_samples,NonI_samples)
+selected_samples= bind_rows( I_samples,NonI_samples)
 
-table(final_samples$typere)   
-table(final_samples$typere, final_samples$region_groups)
-str(final_samples)
+table(selected_samples$typere)   
+table(selected_samples$typere, selected_samples$region_groups)
+str(selected_samples)
 
 
 
@@ -112,21 +129,23 @@ load_expr= function(path){
 
 #------------------------Prepare datasets --------------------------------#
 
-loaded_counts=load_expr("data/GSE193677_MSCCR_Biopsy_counts.txt")
-loaded_counts$expr[1:3,1:3]
+loaded_counts=load_expr("data/row/GSE193677_MSCCR_Biopsy_counts.txt")
+
 dim(loaded_counts$expr)
 length(loaded_counts$genes_id)
 length(loaded_counts$samples)
 counts=loaded_counts$expr
 
 # Keep counts of selected samples 
-counts= counts[final_samples$samples_name,]
+counts= counts[selected_samples$samples_name,]
 dim(counts)
-dim(final_samples)
+dim(selected_samples)
+dim(counts)
 
-
+# Save
+dir.create("data/processed", showWarnings = FALSE)
 fwrite(as.data.table(counts, keep.rownames = "samples_name"),
-       "data/counts_selected_samples.csv")
-fwrite(final_samples, "data/meta_selected_samples.csv")
+       "data/processed/counts_selected_samples.csv")
+fwrite(selected_samples, "data/processed/meta_selected_samples.csv")
 
 
