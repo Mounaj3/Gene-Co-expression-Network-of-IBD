@@ -93,14 +93,11 @@ preprocess_bionero = function(dt,
   exp = as.data.frame(cpm(y, log = TRUE))
   
   
-  # keep the top_n most variable genes
+    # keep the top_n most variable genes
   if (!is.null(top_n)) {
-    mad_values = rowMads(as.matrix(exp), na.rm = TRUE)
-    selected_genes = names(sort(mad_values, decreasing = TRUE))[1:min(top_n, length(mad_values))]
-    exp = exp[selected_genes, , drop = FALSE]
-    cat("After MAD filter:", nrow(exp), "genes\n")
+    exp = filter_by_variance(exp, n = top_n)
+    cat("After variance filter:", nrow(exp), "genes\n")
   }
-  
   # Optional: outlier samples (Z.K method)
   if (remove_outliers) {
     exp = ZKfiltering(exp, cor_method = "pearson")
