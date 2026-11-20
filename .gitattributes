@@ -1,1 +1,2 @@
 data/processed/counts_selected_samples.csv filter=lfs diff=lfs merge=lfs -text
+results/MI_matrix.csv filter=lfs diff=lfs merge=lfs -text
