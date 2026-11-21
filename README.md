@@ -29,8 +29,8 @@ Run the scripts in this order:
    (infotheo, 10 equal-frequency bins), rank genes by mean MI and keep the top 40. Add 12
    regulators from the literature (Johnson et al. 2024, Argmann et al. 2023), normalised from
    the raw counts. Build the final MIIC input: 52 genes + 6 clinical variables
-6. Build  networks with the PC and MIIC algorithms
-7.Explore and visualise the results, compare the two networks, and run a pathway enrichment
+6. `PC_inference.R`: Build  networks with the PC algorithm. The data was also submitted to the MIIC method on the Institut Curie servers
+7. Explore and visualise the results, compare the two networks and interpret the networks
 
 The MI computation takes about 4.5 hours on 3,000 genes. The matrix is saved in
 `results/MI_matrix.csv`, so you only need to compute it once.
